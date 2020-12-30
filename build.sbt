@@ -19,6 +19,7 @@ libraryDependencies ++= Seq(
   "org.postgresql" % "postgresql" % "42.2.18",
   "com.typesafe.akka" %% "akka-serialization-jackson" % akkaVersion,
   "com.github.dnvriend" %% "akka-persistence-jdbc" % "3.5.3",
+  "com.typesafe.akka" %% "akka-persistence-query" % akkaVersion,
   "com.typesafe.akka" %% "akka-persistence-typed" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
   "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,

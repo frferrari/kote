@@ -6,30 +6,29 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives.{as, complete, entity, path, post, _}
 import akka.http.scaladsl.server.Route
-import com.kote.actor.ScrapperManagerActor
-import com.kote.actor.ScrapperManagerActor.UrlSpecification
-import com.kote.model.{ScrapSpecification, ScrapSpecificationJsonProtocol}
+import com.kote.actor.BatchManagerActor
+import com.kote.model.{BatchSpecification, BatchSpecificationJsonProtocol}
 
 import scala.io.StdIn
 
-object ScrapperApp
-  extends ScrapSpecificationJsonProtocol
+object BatchApp
+  extends BatchSpecificationJsonProtocol
     with SprayJsonSupport {
-  implicit val actorSystem = ActorSystem(ScrapperManagerActor(), "scrapperManager")
+  implicit val actorSystem = ActorSystem(BatchManagerActor(), "batchManager")
   implicit val executionContext = actorSystem.executionContext
 
   val routes: Route =
     path("scrap") {
       post {
-        entity(as[ScrapSpecification]) { scrapSpecification =>
-          println(s"scrapSpecification $scrapSpecification")
-          actorSystem ! ScrapperManagerActor.AddUrl(UrlSpecification(scrapSpecification.provider, scrapSpecification.familyId, scrapSpecification.url, scrapSpecification.categories))
+        entity(as[BatchSpecification]) { batchSpecification =>
+          println(s"batchSpecification $batchSpecification")
+          actorSystem ! BatchManagerActor.AddUrl(batchSpecification)
           complete(StatusCodes.OK)
         }
       }
     } ~ path("fetchState") {
         get {
-          actorSystem ! ScrapperManagerActor.FetchState
+          actorSystem ! BatchManagerActor.FetchState
           complete(StatusCodes.OK)
         }
       }

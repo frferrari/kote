@@ -1,10 +1,13 @@
 package com.kote.actor
 
 import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.{Behaviors, TimerScheduler}
+import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
+import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
+import akka.persistence.query.PersistenceQuery
+import akka.stream.Materializer
 import cats.data.Validated.{Invalid, Valid}
 import com.kote.actor.AuctionScrapperProtocol._
-import com.kote.model.{Delcampe, Batch, WebsiteConfig}
+import com.kote.model.{Batch, Delcampe, WebsiteConfig}
 import com.kote.scrapper.DelcampeUtil.randomDurationMs
 import com.kote.validation.{AuctionValidator, DelcampeValidator}
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
@@ -19,6 +22,9 @@ object AuctionScrapperActor {
   implicit val jsoupBrowser: JsoupBrowser = JsoupBrowser.typed()
 
   def apply(): Behavior[PriceScrapperCommand] = Behaviors.setup { context =>
+
+    recoverChildren(context)
+
     // TODO fetch from DB
     val websiteConfigs: List[WebsiteConfig] = List(
       WebsiteConfig(Delcampe, "https://www.delcampe.net/en_US/collectibles/stamps/zambezia?search_mode=all&duration_selection=all", None),
@@ -28,6 +34,19 @@ object AuctionScrapperActor {
     // context.self ! ExtractUrls
 
     processWebsites(websiteConfigs)
+  }
+
+  private def recoverChildren(context: ActorContext[PriceScrapperCommand]) = {
+    // https://doc.akka.io/docs/akka-persistence-jdbc/current/
+    // https://doc.akka.io/docs/akka/current/stream/stream-flows-and-basics.html
+    implicit val mat: Materializer = Materializer(context)
+
+    val readJournal =
+      PersistenceQuery(context.system).readJournalFor[JdbcReadJournal](JdbcReadJournal.Identifier)
+
+    readJournal
+      .currentPersistenceIds()
+      .runForeach(persistenceId => context.log.info(s"recoverChildren persistenceId $persistenceId"))
   }
 
   private def processWebsites(websiteConfigs: List[WebsiteConfig], websiteConfigsIdx: Int = 0): Behavior[PriceScrapperCommand] =
